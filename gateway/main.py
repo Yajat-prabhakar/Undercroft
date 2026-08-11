@@ -4,6 +4,7 @@ Sits in front of a self-hosted Ollama instance. Handles auth, rate limiting,
 request queueing (to protect constrained ARM hardware from overload), and
 exposes metrics for Prometheus scraping.
 """
+# CI/CD pipeline verified working — Day 4
 import os
 import time
 import asyncio
