@@ -9,8 +9,11 @@ client = TestClient(app)
 
 
 def test_generate_requires_api_key():
+    # FastAPI's APIKeyHeader dependency returns 403 when the header is
+    # missing entirely (before our code runs at all) -- distinct from the
+    # 401 we raise ourselves when a key is present but wrong.
     r = client.post("/v1/generate", json={"prompt": "hello"})
-    assert r.status_code == 422 or r.status_code == 401  # missing header vs bad key
+    assert r.status_code == 403  # missing header vs bad key
 
 
 def test_generate_rejects_bad_api_key():
