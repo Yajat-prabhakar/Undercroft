@@ -21,7 +21,8 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: ghcr.io/YOUR_GITHUB_USERNAME/undercroft/gateway:latest
+          image: gateway:local
+          imagePullPolicy: Never
           ports:
             - containerPort: 8000
           env:
