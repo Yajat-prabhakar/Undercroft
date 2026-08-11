@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+.DS_Store
+ssh-key-2026-08-11 (1).key
+ssh-key-2026-08-11.key.pub

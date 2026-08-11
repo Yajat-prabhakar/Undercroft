@@ -1,0 +1,23 @@
+# Apply this once to your cluster with: kubectl apply -f k8s/argocd/application.yaml
+# From then on, Argo CD watches k8s/base/ in this repo and reconciles the cluster
+# to match it automatically. `git push` becomes your deploy mechanism.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: undercroft
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_GITHUB_USERNAME/undercroft.git
+    targetRevision: main
+    path: k8s/base
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: undercroft
+  syncPolicy:
+    automated:
+      prune: true       # remove resources deleted from git
+      selfHeal: true     # revert manual kubectl edits back to match git
+    syncOptions:
+      - CreateNamespace=true

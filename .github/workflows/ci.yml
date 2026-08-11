@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/gateway
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install -r requirements.txt flake8
+
+      - name: Lint
+        run: flake8 . --max-line-length=120 --extend-ignore=E203
+
+      - name: Test
+        run: pytest -v
+
+  build-and-scan:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t local-scan:${{ github.sha }} ./gateway
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: local-scan:${{ github.sha }}
+          format: table
+          exit-code: "1"          # fail the build on HIGH/CRITICAL vulns
+          severity: "CRITICAL,HIGH"
+          ignore-unfixed: true
+
+      - name: Log in to GHCR
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          IMAGE=ghcr.io/${{ env.IMAGE_NAME }}
+          docker tag local-scan:${{ github.sha }} $IMAGE:${{ github.sha }}
+          docker tag local-scan:${{ github.sha }} $IMAGE:latest
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+  update-manifest:
+    # GitOps step: bump the image tag in k8s manifests so Argo CD picks it up.
+    # This is what makes it GitOps rather than "Actions pushes to prod directly".
+    needs: build-and-scan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITOPS_PAT }}   # PAT with repo write, so Argo CD's own sync isn't the one pushing
+
+      - name: Bump image tag
+        run: |
+          sed -i "s|image: ghcr.io/.*|image: ghcr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}|" k8s/base/deployment.yaml
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add k8s/base/deployment.yaml
+          git commit -m "ci: bump gateway image to ${{ github.sha }}" || echo "no changes"
+          git push
