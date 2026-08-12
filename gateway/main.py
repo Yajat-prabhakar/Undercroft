@@ -6,7 +6,6 @@ exposes metrics for Prometheus scraping.
 """
 # CI/CD pipeline verified working — Day 4
 # GitOps loop confirmed live — Day 5
-#live demo: 
 
 import os
 import time
