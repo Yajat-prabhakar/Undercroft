@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/gateway
-
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
@@ -38,8 +34,14 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image_name: ${{ steps.vars.outputs.image_name }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set lowercase image name
+        id: vars
+        run: echo "image_name=$(echo '${{ github.repository }}/gateway' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Build image
         run: docker build -t local-scan:${{ github.sha }} ./gateway
@@ -64,26 +66,24 @@ jobs:
       - name: Push image
         if: github.ref == 'refs/heads/main'
         run: |
-          IMAGE=ghcr.io/${{ env.IMAGE_NAME }}
+          IMAGE=ghcr.io/${{ steps.vars.outputs.image_name }}
           docker tag local-scan:${{ github.sha }} $IMAGE:${{ github.sha }}
           docker tag local-scan:${{ github.sha }} $IMAGE:latest
           docker push $IMAGE:${{ github.sha }}
           docker push $IMAGE:latest
 
   update-manifest:
-    # GitOps step: bump the image tag in k8s manifests so Argo CD picks it up.
-    # This is what makes it GitOps rather than "Actions pushes to prod directly".
     needs: build-and-scan
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITOPS_PAT }}   # PAT with repo write, so Argo CD's own sync isn't the one pushing
+          token: ${{ secrets.GITOPS_PAT }}
 
       - name: Bump image tag
         run: |
-          sed -i "s|image: ghcr.io/.*|image: ghcr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}|" k8s/base/deployment.yaml
+          sed -i "s|image: ghcr.io/.*|image: ghcr.io/${{ needs.build-and-scan.outputs.image_name }}:${{ github.sha }}|" k8s/base/deployment.yaml
 
       - name: Commit and push
         run: |
@@ -92,3 +92,4 @@ jobs:
           git add k8s/base/deployment.yaml
           git commit -m "ci: bump gateway image to ${{ github.sha }}" || echo "no changes"
           git push
+          
