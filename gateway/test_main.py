@@ -52,3 +52,4 @@ def test_metrics_track_request_count():
     client.post("/v1/generate", json={"prompt": "x"})
     after = client.get("/metrics").content
     assert before != after or b"gateway_requests_total" in after
+
