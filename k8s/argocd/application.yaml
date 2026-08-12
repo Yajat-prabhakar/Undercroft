@@ -9,7 +9,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/YOUR_GITHUB_USERNAME/undercroft.git
+    repoURL: https://github.com/Yajat-prabhakar/Undercroft.git
     targetRevision: main
     path: k8s/base
   destination:
