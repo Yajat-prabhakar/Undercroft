@@ -5,6 +5,7 @@ request queueing (to protect constrained ARM hardware from overload), and
 exposes metrics for Prometheus scraping.
 """
 # CI/CD pipeline verified working — Day 4
+# GitOps loop confirmed live — Day 5
 import os
 import time
 import asyncio
