@@ -9,6 +9,6 @@ spec:
     matchLabels:
       app: gateway
   endpoints:
-    - port: http
+    - targetPort: 8000
       path: /metrics
       interval: 15s
