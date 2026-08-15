@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: ghcr.io/yajat-prabhakar/undercroft/gateway:f103d6a1f8773a7c7c4788a42df843569c23fdc1
+          image: ghcr.io/yajat-prabhakar/undercroft/gateway:edac8ce316ad124b52eebd9a0265785a3eeb3578
           ports:
             - containerPort: 8000
           env:
