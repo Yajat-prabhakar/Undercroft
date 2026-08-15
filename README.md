@@ -13,6 +13,8 @@ security, and operational scaffolding that makes a service safe to run
 and safe to change.
 
 ## Architecture
+<img width="1282" height="1132" alt="image" src="https://github.com/user-attachments/assets/b7020882-ca11-4d6c-a1f0-46389bf7d5af" />
+
 ```
 git push (main)
   -> GitHub Actions (lint, test, Trivy scan, build)
