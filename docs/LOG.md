@@ -11,7 +11,6 @@ real record of decisions and problems for interview answers, not prose.
 
 ## Day 2 — [date]
 
-
 ubuntu@undercroft-main:/Undercroft/gateway$ git pull
 remote: Enumerating objects: 7, done.
 remote: Counting objects: 100% (7/7), done.
@@ -49,7 +48,6 @@ ubuntu@undercroft-main:~/Undercroft/gateway$
 
 ## Day 3 — [date]
 
-
 * Installed k3s (lightweight Kubernetes) as a single-node cluster on the Oracle box
 * Fixed a real permissions issue with `kubectl` config access (`KUBECONFIG` env var, persisted to `~/.bashrc`)
 * Built the gateway's Docker image locally and imported it directly into k3s's container storage (`docker save | k3s ctr images import -`) — this is a temporary shortcut for local testing; Day 4's CI pipeline replaces this with a proper registry (GHCR)
@@ -61,11 +59,36 @@ ubuntu@undercroft-main:~/Undercroft/gateway$
 
 ## Day 4 — [date]
 
+**NOTES — real troubleshooting log for your interview, all legitimate:**
+
+1. Trivy found 3 real HIGH-severity CVEs in `starlette` (transitive dependency via fastapi) — fixed by loosening the fastapi version pin so pip resolves a patched version automatically
+2. A pinned Trivy action version (`@0.24.0`) had been deleted/renamed upstream — fixed by switching to `@master` to always track the latest stable release
+3. GHCR (Docker registries generally) require lowercase image names — GitHub repo names can have capitals, so had to add an explicit lowercase-conversion step and pass it between jobs via GitHub Actions' **job outputs** mechanism (since environment variables don't carry across separate jobs)
+4. A flake8 style rule caught a missing trailing newline — trivial but shows the linter catches real formatting conventions
+5. A FastAPI version upgrade changed which exact HTTP status code (401 vs 403) fires for a missing auth header — fixed the test to assert the actual security property (rejection) rather than the exact status code, since the guarantee mattered more than the implementation detail
+
 ## Day 5 — [date]
+
+* Argo CD installed and running (all 7 components healthy)
+* Connected to your GitHub repo, watching the `main` branch
+* Full GitOps loop proven live: code push → CI builds/tests/scans/pushes image → Argo CD auto-detects the change → auto-deploys → confirmed with a real curl response
+* Cleaned up the old duplicate Day 3 resources so `undercroft` namespace is the single source of truth
+* You have actual video proof of the whole chain working, which is more than most people bother to capture
 
 ## Day 6 — [date]
 
+**Day 6 is complete.** Confirmed:
+
+* Sealed Secrets controller installed and running
+* `kubeseal` CLI installed
+* API key re-created as an encrypted SealedSecret, committed to git safely
+* Old plaintext version deleted
+* Full request chain re-verified working with the new encrypted secret
+
 ## Day 7 — [date]
+
+
+- Installed Helm (package manager for Kubernetes), then installed the   kube-prometheus-stack chart (bundles Prometheus, Grafana, Alertmanager)   into the undercroft namespace via \`helm install monitoring   prometheus-community/kube-prometheus-stack -n undercroft\`  - Created a ServiceMonitor (gateway-metrics) to tell Prometheus to scrape   the gateway's /metrics endpoint every 15s  - Bug: Prometheus showed "0/0 up" / "No targets" for gateway-metrics even   though the metric existed (confirmed via direct curl to /metrics) and   the Service had real Endpoints. Root cause: a ServiceMonitor's   \`selector.matchLabels\` matches a Service's own \`metadata.labels\` — not   its \`spec.selector\`, which only controls pod routing. The gateway   Service had a selector but no labels of its own, so Prometheus couldn't   find it via discovery even though it worked fine for normal traffic.  - Diagnosed by: checking raw metrics at the source -> inspecting   Prometheus's live scrape config via /config -> checking the Service's   Endpoints (ruled out networking) -> isolating the label mismatch  - Fix: added \`metadata.labels: app: gateway\` to the gateway Service   (separate from spec.selector, which was already correct) — one line,   auto-deployed via Argo CD once pushed  - Confirmed fix via Prometheus's own Targets UI: gateway-metrics -> 1/1 up  - Built a Grafana dashboard ("Undercroft Gateway") with a live "Request   Rate" panel (rate(gateway\_requests\_total[5m])) showing real traffic   from test curls, plus a Queue Depth panel  - Access pattern for local dev: kubectl port-forward for Prometheus (9090),   Grafana (3000), and the gateway (8080), each tunneled out to Windows via   SSH -L flags — four persistent terminals total during active dev/testing
 
 ## Day 8 — [date]
 
